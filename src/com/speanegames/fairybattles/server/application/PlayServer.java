@@ -7,6 +7,12 @@ import com.esotericsoftware.kryonet.Server;
 import com.speanegames.fairybattles.server.config.AppConfig;
 import com.speanegames.fairybattles.server.lobby.Lobby;
 import com.speanegames.fairybattles.server.player.Player;
+import com.speanegames.fairybattles.server.transfers.transfers.lobby.battle.finish.BattleFinishedEvent;
+import com.speanegames.fairybattles.server.transfers.transfers.lobby.battle.hit.HitFortressEvent;
+import com.speanegames.fairybattles.server.transfers.transfers.lobby.battle.hit.HitHeroEvent;
+import com.speanegames.fairybattles.server.transfers.transfers.lobby.battle.kill.DestroyFortressEvent;
+import com.speanegames.fairybattles.server.transfers.transfers.lobby.battle.kill.KillHeroEvent;
+import com.speanegames.fairybattles.server.transfers.transfers.lobby.battle.kill.RespawnHeroEvent;
 import com.speanegames.fairybattles.server.transfers.transfers.lobby.battle.move.HeroMoveRequest;
 import com.speanegames.fairybattles.server.transfers.transfers.lobby.battle.move.HeroMovedEvent;
 import com.speanegames.fairybattles.server.transfers.transfers.lobby.battle.shoot.HeroShootEvent;
@@ -87,6 +93,12 @@ public class PlayServer {
         kryo.register(HeroMovedEvent.class);
         kryo.register(HeroShootRequest.class);
         kryo.register(HeroShootEvent.class);
+        kryo.register(HitHeroEvent.class);
+        kryo.register(HitFortressEvent.class);
+        kryo.register(KillHeroEvent.class);
+        kryo.register(RespawnHeroEvent.class);
+        kryo.register(DestroyFortressEvent.class);
+        kryo.register(BattleFinishedEvent.class);
     }
 
     private void initListener() {
@@ -94,7 +106,6 @@ public class PlayServer {
 
             @Override
             public void received(Connection c, Object o) {
-                System.out.println(o.getClass());
                 if (o instanceof SignInRequest) {
                     signInRequestHandler(c, (SignInRequest) o);
                 } else if (o instanceof ConnectToLobbyRequest) {
@@ -113,6 +124,18 @@ public class PlayServer {
                     heroMoveRequestHandler(c, (HeroMoveRequest) o);
                 } else if (o instanceof HeroShootRequest) {
                     heroShootRequestHandler(c, (HeroShootRequest) o);
+                } else if (o instanceof HitHeroEvent) {
+                    hitHeroEventHandler(c, (HitHeroEvent) o);
+                } else if (o instanceof HitFortressEvent) {
+                    hitFortressEventHandler(c, (HitFortressEvent) o);
+                } else if (o instanceof KillHeroEvent) {
+                    killHeroEventHandler(c, (KillHeroEvent) o);
+                } else if (o instanceof RespawnHeroEvent) {
+                    respawnHeroEventHandler(c, (RespawnHeroEvent) o);
+                } else if (o instanceof DestroyFortressEvent) {
+                    destroyFortressEventHandler(c, (DestroyFortressEvent) o);
+                } else if (o instanceof BattleFinishedEvent) {
+                    finishBattleEventHandler(c, (BattleFinishedEvent) o  );
                 }
             }
 
@@ -454,5 +477,79 @@ public class PlayServer {
                 server.sendToTCP(lobby.getMoonTeamPlayers()[i].getConnectionID(), event);
             }
         }
+    }
+
+    private void hitHeroEventHandler(Connection connection, HitHeroEvent event) {
+        Player player = players.get(connection.getID());
+        Lobby lobby = lobbies.get(player.getLobbyID());
+        for (int i = 0; i < AppConfig.MAX_TEAM_PLAYERS_AMOUNT; i++) {
+            if (lobby.getSunTeamPlayers()[i] != null) {
+                server.sendToTCP(lobby.getSunTeamPlayers()[i].getConnectionID(), event);
+            }
+            if (lobby.getMoonTeamPlayers()[i] != null) {
+                server.sendToTCP(lobby.getMoonTeamPlayers()[i].getConnectionID(), event);
+            }
+        }
+    }
+
+    private void hitFortressEventHandler(Connection connection, HitFortressEvent event) {
+        Player player = players.get(connection.getID());
+        Lobby lobby = lobbies.get(player.getLobbyID());
+        for (int i = 0; i < AppConfig.MAX_TEAM_PLAYERS_AMOUNT; i++) {
+            if (lobby.getSunTeamPlayers()[i] != null) {
+                server.sendToTCP(lobby.getSunTeamPlayers()[i].getConnectionID(), event);
+            }
+            if (lobby.getMoonTeamPlayers()[i] != null) {
+                server.sendToTCP(lobby.getMoonTeamPlayers()[i].getConnectionID(), event);
+            }
+        }
+    }
+
+    private void killHeroEventHandler(Connection connection, KillHeroEvent event) {
+        Player player = players.get(connection.getID());
+        Lobby lobby = lobbies.get(player.getLobbyID());
+        for (int i = 0; i < AppConfig.MAX_TEAM_PLAYERS_AMOUNT; i++) {
+            if (lobby.getSunTeamPlayers()[i] != null) {
+                server.sendToTCP(lobby.getSunTeamPlayers()[i].getConnectionID(), event);
+            }
+            if (lobby.getMoonTeamPlayers()[i] != null) {
+                server.sendToTCP(lobby.getMoonTeamPlayers()[i].getConnectionID(), event);
+            }
+        }
+    }
+
+    private void respawnHeroEventHandler(Connection connection, RespawnHeroEvent event) {
+        Player player = players.get(connection.getID());
+        Lobby lobby = lobbies.get(player.getLobbyID());
+        for (int i = 0; i < AppConfig.MAX_TEAM_PLAYERS_AMOUNT; i++) {
+            if (lobby.getSunTeamPlayers()[i] != null) {
+                server.sendToTCP(lobby.getSunTeamPlayers()[i].getConnectionID(), event);
+            }
+            if (lobby.getMoonTeamPlayers()[i] != null) {
+                server.sendToTCP(lobby.getMoonTeamPlayers()[i].getConnectionID(), event);
+            }
+        }
+    }
+
+    private void destroyFortressEventHandler(Connection connection, DestroyFortressEvent event) {
+        Player player = players.get(connection.getID());
+        Lobby lobby = lobbies.get(player.getLobbyID());
+        for (int i = 0; i < AppConfig.MAX_TEAM_PLAYERS_AMOUNT; i++) {
+            if (lobby.getSunTeamPlayers()[i] != null) {
+                server.sendToTCP(lobby.getSunTeamPlayers()[i].getConnectionID(), event);
+            }
+            if (lobby.getMoonTeamPlayers()[i] != null) {
+                server.sendToTCP(lobby.getMoonTeamPlayers()[i].getConnectionID(), event);
+            }
+        }
+    }
+
+    private void finishBattleEventHandler(Connection connection, BattleFinishedEvent event) {
+        Player player = players.get(connection.getID());
+        Lobby lobby = lobbies.get(player.getLobbyID());
+        for (Player connectedPlayer : lobby.getConnectedPlayers()) {
+            server.sendToTCP(connectedPlayer.getConnectionID(), event);
+        }
+        lobby.setBattle(false);
     }
 }

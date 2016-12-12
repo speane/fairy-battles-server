@@ -13,6 +13,7 @@ public class Lobby {
     private Player[] sunTeamPlayers;
     private Player[] moonTeamPlayers;
     private List<Player> connectedPlayers;
+    private boolean battle;
 
     public Lobby(String id, Player creator) {
         this.id = id;
@@ -138,5 +139,13 @@ public class Lobby {
 
     public void setConnectedPlayers(List<Player> connectedPlayers) {
         this.connectedPlayers = connectedPlayers;
+    }
+
+    public boolean isBattle() {
+        return battle;
+    }
+
+    public void setBattle(boolean battle) {
+        this.battle = battle;
     }
 }
