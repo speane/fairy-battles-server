@@ -4,6 +4,7 @@ import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.Listener;
 import com.esotericsoftware.kryonet.Server;
+import com.speanegames.fairybattles.server.authentication.AuthenticationController;
 import com.speanegames.fairybattles.server.config.AppConfig;
 import com.speanegames.fairybattles.server.lobby.Lobby;
 import com.speanegames.fairybattles.server.player.Player;
@@ -34,12 +35,14 @@ import com.speanegames.fairybattles.server.transfers.transfers.lobby.leave.Leave
 import com.speanegames.fairybattles.server.transfers.transfers.lobby.leave.LeaveLobbyResponse;
 import com.speanegames.fairybattles.server.transfers.transfers.signin.SignInRequest;
 import com.speanegames.fairybattles.server.transfers.transfers.signin.SignInResponse;
+import com.speanegames.fairybattles.server.transfers.transfers.signout.SignOutRequest;
 import com.speanegames.fairybattles.server.transfers.transfers.signup.SignUpRequest;
 import com.speanegames.fairybattles.server.transfers.transfers.signup.SignUpResponse;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 
@@ -48,9 +51,12 @@ public class PlayServer {
     private HashMap<Integer, Player> players;
     private HashMap<String, Lobby> lobbies;
 
+    private AuthenticationController authenticationController;
+
     public PlayServer() {
         players = new LinkedHashMap<>();
         lobbies = new LinkedHashMap<>();
+        authenticationController = new AuthenticationController();
     }
 
     private Server server;
@@ -99,6 +105,7 @@ public class PlayServer {
         kryo.register(RespawnHeroEvent.class);
         kryo.register(DestroyFortressEvent.class);
         kryo.register(BattleFinishedEvent.class);
+        kryo.register(SignOutRequest.class);
     }
 
     private void initListener() {
@@ -106,36 +113,44 @@ public class PlayServer {
 
             @Override
             public void received(Connection c, Object o) {
-                if (o instanceof SignInRequest) {
-                    signInRequestHandler(c, (SignInRequest) o);
-                } else if (o instanceof ConnectToLobbyRequest) {
-                    connectToLobbyRequestHandler(c, (ConnectToLobbyRequest) o);
-                } else if (o instanceof CreateLobbyRequest) {
-                    createLobbyRequestHandler(c, (CreateLobbyRequest) o);
-                } else if (o instanceof JoinTeamRequest) {
-                    joinTeamRequestHandler(c, (JoinTeamRequest) o);
-                } else if (o instanceof DissolveLobbyRequest) {
-                    dissolveLobbyRequestHandler(c, (DissolveLobbyRequest) o);
-                } else if (o instanceof LeaveLobbyRequest) {
-                    leaveLobbyRequestHandler(c, (LeaveLobbyRequest) o);
-                } else if (o instanceof StartBattleRequest) {
-                    startBattleRequestHandler(c, (StartBattleRequest) o);
-                } else if (o instanceof HeroMoveRequest) {
-                    heroMoveRequestHandler(c, (HeroMoveRequest) o);
-                } else if (o instanceof HeroShootRequest) {
-                    heroShootRequestHandler(c, (HeroShootRequest) o);
-                } else if (o instanceof HitHeroEvent) {
-                    hitHeroEventHandler(c, (HitHeroEvent) o);
-                } else if (o instanceof HitFortressEvent) {
-                    hitFortressEventHandler(c, (HitFortressEvent) o);
-                } else if (o instanceof KillHeroEvent) {
-                    killHeroEventHandler(c, (KillHeroEvent) o);
-                } else if (o instanceof RespawnHeroEvent) {
-                    respawnHeroEventHandler(c, (RespawnHeroEvent) o);
-                } else if (o instanceof DestroyFortressEvent) {
-                    destroyFortressEventHandler(c, (DestroyFortressEvent) o);
-                } else if (o instanceof BattleFinishedEvent) {
-                    finishBattleEventHandler(c, (BattleFinishedEvent) o  );
+                try {
+                    if (o instanceof SignInRequest) {
+                        signInRequestHandler(c, (SignInRequest) o);
+                    } else if (o instanceof ConnectToLobbyRequest) {
+                        connectToLobbyRequestHandler(c, (ConnectToLobbyRequest) o);
+                    } else if (o instanceof CreateLobbyRequest) {
+                        createLobbyRequestHandler(c, (CreateLobbyRequest) o);
+                    } else if (o instanceof JoinTeamRequest) {
+                        joinTeamRequestHandler(c, (JoinTeamRequest) o);
+                    } else if (o instanceof DissolveLobbyRequest) {
+                        dissolveLobbyRequestHandler(c, (DissolveLobbyRequest) o);
+                    } else if (o instanceof LeaveLobbyRequest) {
+                        leaveLobbyRequestHandler(c, (LeaveLobbyRequest) o);
+                    } else if (o instanceof StartBattleRequest) {
+                        startBattleRequestHandler(c, (StartBattleRequest) o);
+                    } else if (o instanceof HeroMoveRequest) {
+                        heroMoveRequestHandler(c, (HeroMoveRequest) o);
+                    } else if (o instanceof HeroShootRequest) {
+                        heroShootRequestHandler(c, (HeroShootRequest) o);
+                    } else if (o instanceof HitHeroEvent) {
+                        hitHeroEventHandler(c, (HitHeroEvent) o);
+                    } else if (o instanceof HitFortressEvent) {
+                        hitFortressEventHandler(c, (HitFortressEvent) o);
+                    } else if (o instanceof KillHeroEvent) {
+                        killHeroEventHandler(c, (KillHeroEvent) o);
+                    } else if (o instanceof RespawnHeroEvent) {
+                        respawnHeroEventHandler(c, (RespawnHeroEvent) o);
+                    } else if (o instanceof DestroyFortressEvent) {
+                        destroyFortressEventHandler(c, (DestroyFortressEvent) o);
+                    } else if (o instanceof BattleFinishedEvent) {
+                        finishBattleEventHandler(c, (BattleFinishedEvent) o  );
+                    } else if (o instanceof SignOutRequest) {
+                        signOutRequestHandler(c, (SignOutRequest) o);
+                    } else if (o instanceof SignUpRequest) {
+                        signUpRequestHandler(c, (SignUpRequest) o);
+                    }
+                } catch (Exception exception) {
+                    System.err.println(exception.getMessage());
                 }
             }
 
@@ -163,10 +178,24 @@ public class PlayServer {
         });
     }
 
-    private void signInRequestHandler(Connection connection, SignInRequest request) {
+    private void signUpRequestHandler(Connection connection, SignUpRequest request) throws SQLException {
+        SignUpResponse response = new SignUpResponse();
+
+        if (!authenticationController.userExists(request.login)) {
+            response.success = true;
+            authenticationController.registerUser(request.login, request.password);
+        } else {
+            response.success = false;
+            response.errorMessage = "Such username is already registered";
+        }
+
+        connection.sendTCP(response);
+    }
+
+    private void signInRequestHandler(Connection connection, SignInRequest request) throws SQLException {
         SignInResponse response = new SignInResponse();
 
-        if (true) {
+        if (authenticationController.checkCredentials(request.login, request.password)) {
             Player player = new Player();
 
             player.setLogin(request.login);
@@ -550,6 +579,13 @@ public class PlayServer {
         for (Player connectedPlayer : lobby.getConnectedPlayers()) {
             server.sendToTCP(connectedPlayer.getConnectionID(), event);
         }
+        server.sendToTCP(lobby.getCreator().getConnectionID(), event);
         lobby.setBattle(false);
+    }
+
+    private void signOutRequestHandler(Connection connection, SignOutRequest request) {
+        if (players.containsKey(connection.getID())) {
+            players.remove(connection.getID());
+        }
     }
 }
